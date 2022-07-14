@@ -4,31 +4,47 @@ import os
 import csv
 import time
 import json
+from os import listdir
 
 AV_APIKEY = os.environ["AV_APIKEY"]
 
 slices = ["year1month1","year1month2", "year1month3", "year1month4", "year1month5", "year1month6", "year1month7", "year1month8", "year1month9", "year1month10", "year1month11", "year1month12", "year2month1", "year2month2", "year2month3", "year2month4", "year2month5", "year2month6", "year2month7", "year2month8", "year2month9", "year2month10", "year2month11", "year2month12"]
 
 def main():
+    data_files = get_current_data_files()
+    current_symbols = []
+    for df in data_files:
+        new_df = df[:-5]
+        current_symbols.append(new_df)
+    
     symbols = get_symbols()
 
     for sy in symbols:
-        data = []
-        counter = 0
-        for s in slices:
-            partial_data = get_data(sy, s)
-            for p in partial_data:
-                data.append(p)
-            print(len(partial_data), len(data))
-            counter = counter + 1
-            if counter == 5:
-                time.sleep(60)
-                counter = 0
-        json_string = json.dumps(data)
-        write_to_file(sy, json_string)
-        time.sleep(60)
+        print(f"Collecting data for {sy}")
+        if sy not in current_symbols:
+            data = []
+            counter = 0
+            for s in slices:
+                partial_data = get_data(sy, s)
+                for p in partial_data:
+                    data.append(p)
+                print(len(partial_data), len(data))
+                counter = counter + 1
+                if counter == 5:
+                    time.sleep(60)
+                    counter = 0
+            json_string = json.dumps(data)
+            write_to_file(sy, json_string)
+            print(f"Data collection is finished for {sy}")
+            time.sleep(60)
+        else:
+            print(f"Data is already exist for {sy}")
         
-    
+
+def get_current_data_files():
+    return os.listdir("data")
+
+
 def write_to_file(symbol, json_string):
     with open(f'data/{symbol}.json', 'w') as f:
         f.write(json_string)
@@ -43,7 +59,6 @@ def get_data(symbol, slice):
         my_list = list(cr)
         my_list.pop(0)
         return my_list
-
 
 
 def get_symbols():
