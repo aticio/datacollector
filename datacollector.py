@@ -1,6 +1,9 @@
 import pandas as pd
 import requests
 import os
+import csv
+import time
+import json
 
 AV_APIKEY = os.environ["AV_APIKEY"]
 
@@ -8,12 +11,38 @@ slices = ["year1month1","year1month2", "year1month3", "year1month4", "year1month
 
 def main():
     symbols = get_symbols()
-    print(symbols[0])
+
+    for sy in symbols:
+        data = []
+        counter = 0
+        for s in slices:
+            partial_data = get_data(sy, s)
+            for p in partial_data:
+                data.append(p)
+            print(len(partial_data), len(data))
+            counter = counter + 1
+            if counter == 5:
+                time.sleep(60)
+                counter = 0
+        json_string = json.dumps(data)
+        write_to_file(sy, json_string)
+        time.sleep(60)
+        
+    
+def write_to_file(symbol, json_string):
+    with open(f'data/{symbol}.json', 'w') as f:
+        f.write(json_string)
+
 
 def get_data(symbol, slice):
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&symbol={symbol}&interval=1min&slice={slice}&apikey={AV_APIKEY}'
-    r = requests.get(url)
-    data = r.json()
+    with requests.Session() as s:
+        download = s.get(url)
+        decoded_content = download.content.decode('utf-8')
+        cr = csv.reader(decoded_content.splitlines(), delimiter=',')
+        my_list = list(cr)
+        my_list.pop(0)
+        return my_list
 
 
 
